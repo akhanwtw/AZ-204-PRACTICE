@@ -1,0 +1,511 @@
+# ☁️ Azure Architecture & Development Practice Questions
+
+--------------------------------------------------------------------------------
+📌 Question 1
+--------------------------------------------------------------------------------
+You are developing an Azure Service application that processes queue data when it 
+receives a message from a mobile application. Messages may not be sent to the 
+service consistently.
+
+Requirements:
+1. Queue size must not grow larger than 80 GB.
+2. Use first-in-first-out (FIFO) ordering of messages.
+3. Minimize Azure costs.
+
+You need to implement the messaging solution.
+
+💡 Proposed Solution:
+- Use the .NET API to add a message to an Azure Storage Queue from the mobile application.
+- Create an Azure Function App that uses an Azure Storage Queue trigger.
+
+❓ Does the solution meet the goal?
+
+A. ✅ Yes  
+B. ❌ No
+
+--------------------------------------------------------------------------------
+✅ Correct Answer: B. No
+--------------------------------------------------------------------------------
+📝 Explanation:
+Although the proposed solution is inexpensive and commonly used, it fails to meet 
+specific requirements:
+
+1. FIFO Ordering ❌
+   - Azure Storage Queues do not guarantee strict FIFO ordering. Microsoft 
+     explicitly states that ordering is best-effort only.
+   - Requirement Check: Failed.
+
+2. Queue Size Limit (80 GB) ❌
+   - Azure Storage Queues do not have a built-in mechanism to cap the queue size 
+     at 80 GB. They can grow to the capacity of the storage account (TB range).
+   - Requirement Check: Failed.
+
+3. Cost Minimization ✅
+   - Storage Queues are generally cheaper than Service Bus.
+   - Requirement Check: Passed.
+
+Conclusion: Since it fails the FIFO and Size Limit requirements, the answer is No.
+
+
+--------------------------------------------------------------------------------
+📌 Question 2
+--------------------------------------------------------------------------------
+A company is developing a solution that allows smart refrigerators to send 
+temperature information to a central location.
+
+The solution must receive and store messages until they can be processed. You 
+create an Azure Service Bus instance (Namespace) by providing a name, pricing 
+tier, subscription, resource group, and location.
+
+You need to complete the configuration.
+
+❓ Which Azure CLI or PowerShell command should you run?
+
+A. az group create --name fridge-rg --location fridge-loc
+B. New-AzureRmServiceBusNamespace -ResourceGroupName fridge-rg -NamespaceName fridge-ns -Location fridge-loc
+C. New-AzureRmServiceBusQueue -ResourceGroupName fridge-rg -NamespaceName fridge-ns -Name fridge-q -EnablePartitioning $False
+D. az servicebus namespace create --resource-group fridge-rg --name fridge-rg --location fridge-loc
+
+--------------------------------------------------------------------------------
+✅ Correct Answer: C
+--------------------------------------------------------------------------------
+📝 Explanation:
+The question states that an Azure Service Bus instance (Namespace) has already 
+been created.
+
+- Option A: Creates a Resource Group (already exists).
+- Option B: Creates a Namespace (already exists).
+- Option C: Creates a Service Bus Queue inside the existing namespace. This is 
+  the correct step to actually store messages.
+- Option D: Creates a Namespace (already exists).
+
+
+--------------------------------------------------------------------------------
+📌 Question 3
+--------------------------------------------------------------------------------
+Same scenario as Question 2, but with different command options.
+
+A company is developing a solution that allows smart refrigerators to send 
+temperature information to a central location. You have created the Service Bus 
+Namespace.
+
+You need to complete the configuration.
+
+❓ Which command should you run?
+
+A.
+az servicebus queue create
+--resource-group fridge-rg
+--namespace-name fridge-ns
+--name fridge-q
+
+B.
+New-AzureRmResourceGroup
+-Name fridge-rg
+-Location fridge-loc
+
+C.
+az servicebus namespace create
+--resource-group fridge-rg
+--name fridge-ns
+--location fridge-loc
+
+D.
+connectionString=$(az servicebus namespace authorization-rule keys list
+--resource-group fridge-rg
+--namespace-name fridge-ns
+--query primaryConnectionString -output tsv)
+
+--------------------------------------------------------------------------------
+✅ Correct Answer: A
+--------------------------------------------------------------------------------
+📝 Explanation:
+- Option A: Creates the Queue required to store the messages. Since the namespace 
+  exists, this is the next logical step.
+- Option B: Creates a Resource Group (Redundant).
+- Option C: Creates a Namespace (Redundant).
+- Option D: Retrieves a connection string but does not create the storage entity 
+  (Queue) needed.
+
+
+--------------------------------------------------------------------------------
+📌 Question 4
+--------------------------------------------------------------------------------
+You are developing an Azure solution to collect point-of-sale (POS) device data 
+from 2,000 stores worldwide. A single device produces 2 MB of data every 24 hours. 
+Each store has 1–5 devices sending data.
+
+You must store the device data in Azure Blob storage. Device data must be 
+correlated based on a device identifier.
+
+💡 Proposed Solution:
+Provision an Azure Event Grid and configure event filtering to evaluate the 
+device identifier.
+
+❓ Does the solution meet the goal?
+
+A. ✅ Yes  
+B. ❌ No
+
+--------------------------------------------------------------------------------
+✅ Correct Answer: B. No
+--------------------------------------------------------------------------------
+📝 Explanation:
+- Azure Event Grid is a reactive event routing service (e.g., "File Created", 
+  "Resource Updated"). It is not designed for high-throughput data ingestion or 
+  large payloads.
+- The Problem: You are dealing with a continuous stream of telemetry data 
+  (~10,000 devices). Event Grid is not the right tool for ingesting this volume 
+  of raw data.
+- The Solution: Use Azure Event Hubs or Azure IoT Hub, which are architected for 
+  massive telemetry ingestion and buffering.
+
+
+--------------------------------------------------------------------------------
+📌 Question 5
+--------------------------------------------------------------------------------
+You are developing an Azure solution to collect point‑of‑sale (POS) device data 
+from 2,000 stores worldwide. A single device produces ~2 MB of data/day. Each 
+store has 1–5 devices sending data.
+
+You must store the device data in Azure Blob storage. Device data must be 
+correlated based on a device identifier.
+
+💡 Proposed Solution:
+Provision an Azure Service Bus, and configure a topic to receive the device data 
+by using a correlation filter.
+
+❓ Does the solution meet the goal?
+
+A. ✅ Yes  
+B. ❌ No
+
+--------------------------------------------------------------------------------
+✅ Correct Answer: B. No
+--------------------------------------------------------------------------------
+📝 Explanation:
+While Service Bus can handle messages and filtering, it is the wrong architectural 
+choice for this specific scenario.
+
+1. Wrong Pattern: Service Bus is for Enterprise Messaging (high-value, 
+   transactional, lower throughput). The scenario describes Telemetry Ingestion 
+   (high volume, stream-based).
+2. Throughput & Scale: For 2,000+ stores sending continuous data, Azure Event 
+   Hubs is the standard solution. It is designed to ingest millions of events 
+   per second.
+3. Storage Integration: Event Hubs has a built-in "Capture" feature to 
+   automatically save streams to Blob Storage. Service Bus would require writing 
+   custom code to move messages to Blob Storage.
+
+Verdict: Use Azure Event Hubs or IoT Hub for telemetry. Use Service Bus for 
+business logic (e.g., processing an order).
+
+--------------------------------------------------------------------------------
+📌 Question 6
+--------------------------------------------------------------------------------
+You need to correct the VM issues.
+
+Which tools should you use? To answer, select the appropriate options in the 
+answer area.
+
+**Issue: Backup and Restore**
+[ Dropdown Options ]
+- Azure Site Recovery
+- Azure Backup
+- Azure Data Box
+- Azure Migrate
+
+**Issue: Performance**
+[ Dropdown Options ]
+- Azure Network Watcher
+- Azure Traffic Manager
+- ExpressRoute
+- Accelerated Networking
+
+--------------------------------------------------------------------------------
+✅ Correct Answer
+--------------------------------------------------------------------------------
+**Issue: Backup and Restore** ➔ **Azure Backup**
+**Issue: Performance**        ➔ **Accelerated Networking**
+
+--------------------------------------------------------------------------------
+📝 Explanation
+--------------------------------------------------------------------------------
+1. **Backup and Restore: Azure Backup**
+   - **Azure Backup** is the Azure-native service designed specifically to back 
+     up data and recover it. It supports backing up Azure Virtual Machines, SQL 
+     workloads, and on-premises files. It allows you to restore entire VMs or 
+     specific files/folders.
+   - *Why not others?*
+     - *Azure Site Recovery* is for Disaster Recovery (replication and failover), 
+       not standard backup/restore operations.
+     - *Azure Data Box* is for moving large amounts of data *into* Azure physically.
+     - *Azure Migrate* is for migrating on-premises resources to Azure.
+
+2. **Performance: Accelerated Networking**
+   - **Accelerated Networking** enables single root I/O virtualization (SR-IOV) 
+     to a VM, greatly improving its networking performance. It reduces latency, 
+     jitter, and CPU utilization for the most demanding workloads.
+   - *Why not others?*
+     - *Azure Network Watcher* is a monitoring and diagnostic tool. It helps 
+       *identify* issues but does not inherently fix performance itself.
+     - *Azure Traffic Manager* is a DNS-based traffic load balancer, used for 
+       routing traffic globally, not for fixing individual VM performance.
+     - *ExpressRoute* provides a private connection to Azure, which improves 
+       connectivity reliability but is a connectivity solution, not a VM-level 
+       performance fix.      
+
+--------------------------------------------------------------------------------
+📌 Question 7
+--------------------------------------------------------------------------------
+You need to ensure disaster recovery requirements are met.
+
+What code should you add at line PC16?
+
+To answer, drag the appropriate code fragments to the correct locations.
+
+**Code Snippet:**
+```csharp
+var copyOptions = new CopyOptions { };
+var context = new ┌───────────┐
+                  │  Value1   │
+                  └───────────┘ {
+    ┌───────────┐ = (source, destination) => Task.FromResult(true);
+    │  Value2   │
+    └───────────┘
+};
+context.┌───────────┐ = (source, destination) => Task.FromResult(true);
+        │  Value3   │
+        └───────────┘
+await TransferManager.CopyAsync(blob, GetDRBlob(blob), isServiceCopy: ┌───────────┐
+                                                                      │  Value4   │
+                                                                      └───────────┘, 
+                                                            context: context, options: copyOptions);
+
+```
+
+Options:
+- true
+- SingleTransferContext
+- ShouldTransferCallbackAsync
+- false
+- DirectoryTransferContext
+- ShouldOverwriteCallbackAsync
+
+--------------------------------------------------------------------------------
+✅ Correct Answer
+--------------------------------------------------------------------------------
+```csharp
+var copyOptions = new CopyOptions { };
+var context = new ┌─────────────────────┐
+                  │ SingleTransferContext │
+                  └─────────────────────┘ {
+    ┌─────────────────────────────┐ = (source, destination) => Task.FromResult(true);
+    │ ShouldOverwriteCallbackAsync │
+    └─────────────────────────────┘
+};
+context.┌─────────────────────────────┐ = (source, destination) => Task.FromResult(true);
+        │ ShouldTransferCallbackAsync │
+        └─────────────────────────────┘
+await TransferManager.CopyAsync(blob, GetDRBlob(blob), isServiceCopy: ┌────┐
+                                                                      │true│
+                                                                      └────┘, 
+                                                            context: context, options: copyOptions);
+
+```
+
+1. Value 1: SingleTransferContext
+2. Value 2: ShouldOverwriteCallbackAsync
+3. Value 3: ShouldTransferCallbackAsync
+4. Value 4: true
+
+(Note: Value 2 and Value 3 can be swapped as they are both property assignments 
+returning true, but ShouldOverwriteCallbackAsync is critical for DR to ensure 
+updates are applied.)
+
+--------------------------------------------------------------------------------
+📝 Explanation
+--------------------------------------------------------------------------------
+1. Value 1: SingleTransferContext
+   - The code is copying a single `blob` (indicated by the variable name and 
+     usage).
+   - `SingleTransferContext` is used for single file/blob transfers.
+   - `DirectoryTransferContext` would be used for transferring containers or 
+     directories.
+
+2. Value 2 & 3: ShouldOverwriteCallbackAsync & ShouldTransferCallbackAsync
+   - To ensure disaster recovery (DR) requirements are met, you typically want 
+     to force the copy to ensure the destination matches the source, even if 
+     the file already exists.
+   - `ShouldOverwriteCallbackAsync` returning `true` ensures that existing 
+     blobs at the destination are overwritten with the latest version from the 
+     source.
+   - `ShouldTransferCallbackAsync` returning `true` ensures that the transfer 
+     logic proceeds for every file.
+   - Both are set to `Task.FromResult(true)` in the snippet to enforce "Always 
+     Transfer" and "Always Overwrite".
+
+3. Value 4: true
+   - The `isServiceCopy` parameter determines whether the copy is performed 
+     server-side (Azure-to-Azure) or client-side (Download-then-Upload).
+   - For Disaster Recovery between Azure regions, Server-Side Copy (`true`) is 
+     the standard, most efficient, and performant method, as data moves 
+     directly between storage accounts via the Azure backbone network.
+
+--------------------------------------------------------------------------------
+📌 Question 8
+--------------------------------------------------------------------------------
+You need to add code at line PC32 in Processing.cs to implement the 
+GetCredentials method in the Processing class.
+
+How should you complete the code? To answer, drag the appropriate code segments 
+to the correct locations.
+
+**Code Snippet:**
+```csharp
+var tp = new ┌─────────────────────────────┐
+             └─────────────────────────────┘
+var t = new TokenCredential(await ┌─────────────────────────────┐ );
+                                  └─────────────────────────────┘
+return new StorageCredentials(t);
+```
+
+Options:
+- MSITokenProvider("...", null)
+- tp.GetAccessTokenAsync("...")
+- AzureServiceTokenProvider()
+- StringTokenProvider("storage", "msi")
+- tp.GetAuthenticationHeaderAsync(CancellationToken.None)
+
+--------------------------------------------------------------------------------
+✅ Correct Answer
+--------------------------------------------------------------------------------
+1. Value 1: AzureServiceTokenProvider()
+2. Value 2: tp.GetAccessTokenAsync("...")
+
+--------------------------------------------------------------------------------
+📝 Explanation
+--------------------------------------------------------------------------------
+1. Value 1: AzureServiceTokenProvider()
+   - The `AzureServiceTokenProvider` class (from the 
+     `Microsoft.Azure.Services.AppAuthentication` library) is the standard 
+     mechanism in this SDK generation for obtaining access tokens. It 
+     automatically handles authentication using Managed Identities (MSI) when 
+     running in Azure, or developer credentials (VS, CLI) when running locally.
+   - `MSITokenProvider` and `StringTokenProvider` are not the standard public 
+     classes used for this general-purpose token retrieval in this context.
+
+2. Value 2: tp.GetAccessTokenAsync("...")
+   - The `TokenCredential` constructor expects a raw token string.
+   - The `GetAccessTokenAsync` method retrieves the raw OAuth access token 
+     (string) for the specified resource (e.g., "https://storage.azure.com/").
+   - `GetAuthenticationHeaderAsync` would return a full HTTP header value 
+     (e.g., "Bearer eyJ0..."), which is not what the `TokenCredential` 
+     constructor expects.  
+
+
+--------------------------------------------------------------------------------
+📌 Question 9
+--------------------------------------------------------------------------------
+You need to secure the Azure Functions to meet the security requirements.
+
+Which two actions should you perform? Each correct answer presents part of the solution.
+
+NOTE: Each correct selection is worth one point.
+
+Options:
+1. A. Store the RSA-HSM key in Azure Key Vault with soft-delete and purge-protection features enabled.
+2. B. Store the RSA-HSM key in Azure Blob storage with an immutability policy applied to the container.
+3. C. Create a free tier Azure App Configuration instance with a new Azure AD service principal.
+4. D. Create a standard tier Azure App Configuration instance with an assigned Azure AD managed identity.
+
+--------------------------------------------------------------------------------
+✅ Correct Answer
+--------------------------------------------------------------------------------
+A and D
+
+--------------------------------------------------------------------------------
+📝 Explanation
+--------------------------------------------------------------------------------
+1. Action A (Key Storage):
+   - RSA-HSM keys (Hardware Security Module backed keys) must be stored in a 
+     supported key management service.
+   - Azure Key Vault (Premium SKU) or Azure Managed HSM are the correct 
+     services for storing RSA-HSM keys.
+   - Soft-delete and purge-protection are critical security features that 
+     prevent accidental or malicious deletion of keys. They are often 
+     prerequisites for using Customer Managed Keys (CMK) with other Azure 
+     services.
+   - Azure Blob Storage (Option B) is for object storage and cannot host 
+     active cryptographic keys for service operations.
+
+2. Action D (App Configuration Access):
+   - Managed Identities (Option D) are the recommended security practice for 
+     Azure resources to authenticate to other services. They eliminate the 
+     need to manage credentials (like client secrets) in your code or 
+     configuration.
+   - Service Principals (Option C) require managing and rotating client 
+     secrets, which introduces security risks.
+   - While the Free tier of App Configuration does support Managed Identity, 
+     Option C explicitly pairs "Free tier" with "Service Principal" (incorrect 
+     security practice), whereas Option D pairs "Standard tier" with "Managed 
+     Identity" (correct security practice).
+     https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references?tabs=azure-cli
+    
+--------------------------------------------------------------------------------
+📌 Question 10
+--------------------------------------------------------------------------------
+You develop software solutions for a mobile delivery service. You are developing 
+a mobile app that users can use to order from a restaurant in their area.
+
+The app uses the following workflow:
+1. A driver selects the restaurants for which they will deliver orders.
+2. Orders are sent to all available drivers in an area.
+3. Only orders for the selected restaurants will appear for the driver.
+4. The first driver to accept an order removes it from the list of available orders.
+
+You need to implement an Azure Service Bus solution.
+
+Which three actions should you perform in sequence?
+
+Actions:
+- Create a single Service Bus topic.
+- Create a Service Bus Namespace for each restaurant for which a driver can receive messages.
+- Create a single Service Bus subscription.
+- Create a Service Bus subscription for each restaurant for which a driver can receive orders.
+- Create a single Service Bus Namespace.
+- Create a Service Bus topic for each restaurant for which a driver can receive messages.
+
+--------------------------------------------------------------------------------
+✅ Correct Answer
+--------------------------------------------------------------------------------
+1. Create a single Service Bus Namespace.
+2. Create a single Service Bus topic.
+3. Create a Service Bus subscription for each restaurant for which a driver can receive orders.
+
+--------------------------------------------------------------------------------
+📝 Explanation
+--------------------------------------------------------------------------------
+1. Step 1: Create a single Service Bus Namespace.
+   - This is the fundamental container for all messaging components. You do not 
+     need a namespace per restaurant; that would be inefficient and hard to 
+     manage.
+
+2. Step 2: Create a single Service Bus topic.
+   - A **Topic** is designed for one-to-many communication scenarios. The 
+     order placement system sends all orders to this single "Orders" topic. 
+     Creating a topic per restaurant would tightly couple the sender to the 
+     specific restaurant infrastructure, which is a poor design pattern.
+
+3. Step 3: Create a Service Bus subscription for each restaurant...
+   - This is the critical design choice that satisfies the requirements.
+   - **Filtering:** By creating a subscription for each restaurant (e.g., 
+     `Sub_PizzaPlace` with a filter `RestaurantId = 'Pizza'`), you ensure 
+     that only orders for that specific restaurant end up in that queue.
+   - **Driver Selection:** Drivers who select "PizzaPlace" will connect to the 
+     `Sub_PizzaPlace` subscription.
+   - **Competing Consumers:** Since multiple drivers will be listening to the 
+     *same* subscription (the one for the restaurant they selected), the 
+     **Competing Consumers** pattern applies. When the first driver accepts 
+     (completes) the message, it is removed from that subscription, ensuring 
+     other drivers no longer see it.
